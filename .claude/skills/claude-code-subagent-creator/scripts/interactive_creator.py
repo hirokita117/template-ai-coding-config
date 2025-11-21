@@ -129,6 +129,29 @@ def main():
     model_choice = get_input("Choice (1-4)", "1")
     model_map = {"1": "sonnet", "2": "opus", "3": "haiku", "4": "inherit"}
     model = model_map.get(model_choice, "sonnet")
+
+    # Select permission mode
+    print("\nSelect permission mode:")
+    print("  1. default (standard permissions)")
+    print("  2. acceptEdits (automatically accept edits)")
+    print("  3. bypassPermissions (bypass all permission checks)")
+    print("  4. plan (read-only planning mode)")
+    print("  5. ignore (ignore all permissions)")
+    
+    perm_choice = get_input("Choice (1-5)", "1")
+    perm_map = {
+        "1": "default", 
+        "2": "acceptEdits", 
+        "3": "bypassPermissions", 
+        "4": "plan", 
+        "5": "ignore"
+    }
+    permission_mode = perm_map.get(perm_choice, "default")
+
+    # Ask for skills
+    print("\nEnter skills to auto-load (comma-separated, optional):")
+    skills_input = get_input("Skills").strip()
+    skills = [s.strip() for s in skills_input.split(",")] if skills_input else None
     
     # Ask about output location
     print("\nWhere should the subagent be saved?")
@@ -162,7 +185,9 @@ def main():
         requirements=requirements,
         tools=tools,
         model=model,
-        proactive=proactive
+        proactive=proactive,
+        permission_mode=permission_mode,
+        skills=skills
     )
     
     # Show preview
@@ -172,6 +197,9 @@ def main():
     print(f"Description: {agent_config['description']}")
     print(f"Model: {agent_config.get('model', 'sonnet')}")
     print(f"Tools: {agent_config.get('tools', 'All tools (inherited)')}")
+    print(f"Permission Mode: {agent_config.get('permission_mode', 'default')}")
+    if agent_config.get('skills'):
+        print(f"Skills: {', '.join(agent_config['skills'])}")
     print("\nSystem Prompt Preview (first 500 chars):")
     print(agent_config['system_prompt'][:500] + "...")
     print("-" * 30)

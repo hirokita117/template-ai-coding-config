@@ -40,6 +40,8 @@ Options:
 - `--tools`: Specify tools (e.g., --tools Read Write Bash)
 - `--model`: Choose model (sonnet, opus, haiku, inherit)
 - `--proactive`: Make agent trigger automatically
+- `--permission-mode`: Set permission mode (default, acceptEdits, bypassPermissions, plan, ignore)
+- `--skills`: Specify skills to auto-load (e.g., --skills skill1 skill2)
 - `--project-path`: Set project directory
 - `--output`: Custom output path
 
@@ -76,12 +78,14 @@ from create_subagent import SubagentCreator
 
 creator = SubagentCreator(project_path="/path/to/project")
 
-agent_config = creator.create_agent_from_requirements(
+    agent_config = creator.create_agent_from_requirements(
     name="code-reviewer",
     requirements="Review code for quality, security, and best practices",
     tools=["Read", "Grep", "Glob"],
     model="sonnet",
-    proactive=True
+    proactive=True,
+    permission_mode="default",
+    skills=["code-analysis"]
 )
 
 file_path = creator.save_agent(agent_config)
@@ -112,6 +116,17 @@ Common tool combinations:
 - **opus**: Most capable, complex tasks
 - **haiku**: Fastest, simple tasks
 - **inherit**: Same as main conversation
+
+### Permission Mode
+- **default**: Standard permissions
+- **acceptEdits**: Automatically accept edits
+- **bypassPermissions**: Bypass all permission checks
+- **plan**: Read-only planning mode
+- **ignore**: Ignore all permissions
+
+### Skills
+- List of skill names to auto-load
+- Skills are loaded into the subagent's context automatically
 
 ### Proactive Behavior
 Proactive agents trigger automatically for:

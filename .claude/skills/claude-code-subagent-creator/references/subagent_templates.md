@@ -12,6 +12,8 @@ name: agent-name
 description: Brief description and trigger conditions
 tools: Tool1, Tool2, Tool3  # Optional
 model: sonnet  # Optional: sonnet, opus, haiku, or inherit
+permissionMode: default  # Optional: default, acceptEdits, bypassPermissions, plan, ignore
+skills: skill1, skill2  # Optional: skills to auto-load
 ---
 
 System prompt defining the agent's behavior and approach

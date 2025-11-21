@@ -26,6 +26,9 @@ class SubagentCreator:
     # Available model options
     AVAILABLE_MODELS = ["sonnet", "opus", "haiku", "inherit"]
     
+    # Available permission modes
+    AVAILABLE_PERMISSION_MODES = ["default", "acceptEdits", "bypassPermissions", "plan", "ignore"]
+
     def __init__(self, project_path: Optional[str] = None):
         """Initialize the SubagentCreator.
         
@@ -41,7 +44,9 @@ class SubagentCreator:
         requirements: str,
         tools: Optional[List[str]] = None,
         model: str = "sonnet",
-        proactive: bool = False
+        proactive: bool = False,
+        permission_mode: str = "default",
+        skills: Optional[List[str]] = None
     ) -> Dict[str, any]:
         """Create a subagent from natural language requirements.
         
@@ -51,6 +56,8 @@ class SubagentCreator:
             tools: List of tools the agent should have access to
             model: The model to use (sonnet, opus, haiku, inherit)
             proactive: Whether the agent should be used proactively
+            permission_mode: Permission mode for the subagent
+            skills: List of skills to auto-load
             
         Returns:
             Dictionary containing the generated agent details
@@ -69,12 +76,19 @@ class SubagentCreator:
         if model not in self.AVAILABLE_MODELS:
             print(f"Warning: Unknown model '{model}'. Using 'sonnet' as default.")
             model = "sonnet"
+
+        # Validate permission mode
+        if permission_mode not in self.AVAILABLE_PERMISSION_MODES:
+            print(f"Warning: Unknown permission mode '{permission_mode}'. Using 'default' as default.")
+            permission_mode = "default"
         
         return {
             "name": name,
             "description": description,
             "tools": tools,
             "model": model,
+            "permission_mode": permission_mode,
+            "skills": skills,
             "system_prompt": system_prompt
         }
     
@@ -318,6 +332,12 @@ Refactoring goals:
         
         if agent_config.get("model") and agent_config["model"] != "sonnet":
             frontmatter["model"] = agent_config["model"]
+
+        if agent_config.get("permission_mode") and agent_config["permission_mode"] != "default":
+            frontmatter["permissionMode"] = agent_config["permission_mode"]
+
+        if agent_config.get("skills"):
+            frontmatter["skills"] = ", ".join(agent_config["skills"])
         
         # Generate the complete Markdown
         yaml_content = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
@@ -361,6 +381,19 @@ def main():
         action="store_true",
         help="Make the agent proactive (automatically triggered)"
     )
+
+    parser.add_argument(
+        "--permission-mode",
+        default="default",
+        choices=["default", "acceptEdits", "bypassPermissions", "plan", "ignore"],
+        help="Permission mode for the subagent"
+    )
+
+    parser.add_argument(
+        "--skills",
+        nargs="*",
+        help="List of skills to auto-load"
+    )
     
     parser.add_argument(
         "--project-path",
@@ -389,7 +422,9 @@ def main():
         requirements=args.requirements,
         tools=args.tools,
         model=args.model,
-        proactive=args.proactive
+        proactive=args.proactive,
+        permission_mode=args.permission_mode,
+        skills=args.skills
     )
     
     if args.json:
