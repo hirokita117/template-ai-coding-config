@@ -14,6 +14,7 @@ tools: Tool1, Tool2, Tool3  # Optional
 model: sonnet  # Optional: sonnet, opus, haiku, or inherit
 permissionMode: default  # Optional: default, acceptEdits, bypassPermissions, plan, ignore
 skills: skill1, skill2  # Optional: skills to auto-load
+color: blue  # Optional: color identifier for UI display (color name or hex code)
 ---
 
 System prompt defining the agent's behavior and approach

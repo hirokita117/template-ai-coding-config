@@ -42,6 +42,7 @@ Options:
 - `--proactive`: Make agent trigger automatically
 - `--permission-mode`: Set permission mode (default, acceptEdits, bypassPermissions, plan, ignore)
 - `--skills`: Specify skills to auto-load (e.g., --skills skill1 skill2)
+- `--color`: Set color for UI display (e.g., --color blue or --color "#3B82F6")
 - `--project-path`: Set project directory
 - `--output`: Custom output path
 
@@ -85,7 +86,8 @@ creator = SubagentCreator(project_path="/path/to/project")
     model="sonnet",
     proactive=True,
     permission_mode="default",
-    skills=["code-analysis"]
+    skills=["code-analysis"],
+    color="blue"
 )
 
 file_path = creator.save_agent(agent_config)
@@ -127,6 +129,12 @@ Common tool combinations:
 ### Skills
 - List of skill names to auto-load
 - Skills are loaded into the subagent's context automatically
+
+### Color
+- Optional color identifier for UI display
+- Used to visually distinguish subagents in the `/agents` interface
+- Accepts standard color names (e.g., "blue", "green", "red") or hex color codes (e.g., "#3B82F6")
+- If omitted, Claude Code uses default styling
 
 ### Proactive Behavior
 Proactive agents trigger automatically for:

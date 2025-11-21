@@ -46,7 +46,8 @@ class SubagentCreator:
         model: str = "sonnet",
         proactive: bool = False,
         permission_mode: str = "default",
-        skills: Optional[List[str]] = None
+        skills: Optional[List[str]] = None,
+        color: Optional[str] = None
     ) -> Dict[str, any]:
         """Create a subagent from natural language requirements.
         
@@ -58,6 +59,7 @@ class SubagentCreator:
             proactive: Whether the agent should be used proactively
             permission_mode: Permission mode for the subagent
             skills: List of skills to auto-load
+            color: Optional color identifier for UI display (color name or hex code)
             
         Returns:
             Dictionary containing the generated agent details
@@ -89,6 +91,7 @@ class SubagentCreator:
             "model": model,
             "permission_mode": permission_mode,
             "skills": skills,
+            "color": color,
             "system_prompt": system_prompt
         }
     
@@ -338,6 +341,9 @@ Refactoring goals:
 
         if agent_config.get("skills"):
             frontmatter["skills"] = ", ".join(agent_config["skills"])
+
+        if agent_config.get("color"):
+            frontmatter["color"] = agent_config["color"]
         
         # Generate the complete Markdown
         yaml_content = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
@@ -394,6 +400,11 @@ def main():
         nargs="*",
         help="List of skills to auto-load"
     )
+
+    parser.add_argument(
+        "--color",
+        help="Color identifier for UI display (e.g., 'blue' or '#3B82F6')"
+    )
     
     parser.add_argument(
         "--project-path",
@@ -424,7 +435,8 @@ def main():
         model=args.model,
         proactive=args.proactive,
         permission_mode=args.permission_mode,
-        skills=args.skills
+        skills=args.skills,
+        color=args.color
     )
     
     if args.json:

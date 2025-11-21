@@ -152,6 +152,11 @@ def main():
     print("\nEnter skills to auto-load (comma-separated, optional):")
     skills_input = get_input("Skills").strip()
     skills = [s.strip() for s in skills_input.split(",")] if skills_input else None
+
+    # Ask for color
+    print("\nEnter color for UI display (optional):")
+    print("  Examples: 'blue', 'green', 'red', or hex code like '#3B82F6'")
+    color = get_input("Color").strip() or None
     
     # Ask about output location
     print("\nWhere should the subagent be saved?")
@@ -187,7 +192,8 @@ def main():
         model=model,
         proactive=proactive,
         permission_mode=permission_mode,
-        skills=skills
+        skills=skills,
+        color=color
     )
     
     # Show preview
@@ -200,6 +206,8 @@ def main():
     print(f"Permission Mode: {agent_config.get('permission_mode', 'default')}")
     if agent_config.get('skills'):
         print(f"Skills: {', '.join(agent_config['skills'])}")
+    if agent_config.get('color'):
+        print(f"Color: {agent_config['color']}")
     print("\nSystem Prompt Preview (first 500 chars):")
     print(agent_config['system_prompt'][:500] + "...")
     print("-" * 30)
