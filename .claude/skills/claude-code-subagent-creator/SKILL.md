@@ -187,3 +187,8 @@ See `references/subagent_templates.md` for:
 - `scripts/create_subagent.py`: Main agent creation script with CLI interface
 - `scripts/interactive_creator.py`: Interactive wizard for guided creation
 - `references/subagent_templates.md`: Complete templates and patterns library
+
+## Compatibility Note
+
+This skill is compatible with the Claude Code subagent specification as of November 2025.
+Future updates to the subagent configuration format (e.g., changes to YAML frontmatter fields) may require updates to this skill.
