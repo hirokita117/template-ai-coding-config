@@ -5,11 +5,11 @@ Create Claude Code subagent from requirements.
 
 import os
 import sys
-import yaml
 import argparse
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 import json
+import re
 
 
 class SubagentCreator:
@@ -315,6 +315,79 @@ Refactoring goals:
         
         return str(file_path)
     
+    def _dump_yaml(self, data: Dict[str, any]) -> str:
+        """Convert a dictionary to YAML format without external dependencies.
+        
+        Args:
+            data: Dictionary to convert to YAML
+            
+        Returns:
+            YAML-formatted string
+        """
+        lines = []
+        
+        for key, value in data.items():
+            if value is None:
+                continue
+            
+            if isinstance(value, list):
+                # Handle list values
+                if len(value) == 0:
+                    lines.append(f"{key}: []")
+                else:
+                    lines.append(f"{key}:")
+                    for item in value:
+                        escaped_item = self._escape_yaml_value(str(item))
+                        lines.append(f"  - {escaped_item}")
+            elif isinstance(value, bool):
+                # Handle boolean values
+                lines.append(f"{key}: {str(value).lower()}")
+            elif isinstance(value, (int, float)):
+                # Handle numeric values
+                lines.append(f"{key}: {value}")
+            else:
+                # Handle string values
+                escaped_value = self._escape_yaml_value(str(value))
+                lines.append(f"{key}: {escaped_value}")
+        
+        return "\n".join(lines)
+    
+    def _escape_yaml_value(self, value: str) -> str:
+        """Escape a YAML string value if necessary.
+        
+        Args:
+            value: String value to escape
+            
+        Returns:
+            Escaped string value
+        """
+        # Check if value needs quoting
+        needs_quotes = False
+        
+        # Check for special characters that require quoting
+        special_chars = [':', '#', '|', '>', '&', '*', '!', '%', '@', '`', '{', '}', '[', ']']
+        if any(char in value for char in special_chars):
+            needs_quotes = True
+        
+        # Check if value looks like a number or boolean
+        if re.match(r'^-?\d+$', value) or value.lower() in ['true', 'false', 'null', 'yes', 'no', 'on', 'off']:
+            needs_quotes = True
+        
+        # Check for leading/trailing whitespace or newlines
+        if value != value.strip() or '\n' in value:
+            needs_quotes = True
+        
+        # Check if value starts with special YAML characters
+        if value.startswith(('!', '@', '&', '*', '|', '>', '%', '`')):
+            needs_quotes = True
+        
+        if needs_quotes:
+            # Escape quotes and backslashes
+            escaped = value.replace('\\', '\\\\').replace('"', '\\"')
+            return f'"{escaped}"'
+        
+        return value
+    
     def _generate_markdown(self, agent_config: Dict[str, any]) -> str:
         """Generate the Markdown file content for the agent.
         
@@ -346,9 +419,9 @@ Refactoring goals:
             frontmatter["color"] = agent_config["color"]
         
         # Generate the complete Markdown
-        yaml_content = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+        yaml_content = self._dump_yaml(frontmatter)
         
-        markdown = f"---\n{yaml_content}---\n\n{agent_config['system_prompt']}"
+        markdown = f"---\n{yaml_content}\n---\n\n{agent_config['system_prompt']}"
         
         return markdown
 
