@@ -20,16 +20,8 @@
             "command": "afplay -v 1.5 /System/Library/Sounds/Glass.aiff"
           }
         ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "Did Claude just finish creating a plan and call ExitPlanMode (not executing code or implementation)? If yes, return {\"ok\": false, \"reason\": \"Plan review checkpoint. Review the plan before proceeding with implementation.\"}. Otherwise return {\"ok\": true}."
-          }
-        ]
       }
     ]
-  }
+  },
+  "effortLevel": "medium"
 }
