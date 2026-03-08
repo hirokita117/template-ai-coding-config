@@ -39,27 +39,46 @@ fi
 # --- Language & framework detection ---
 LANGUAGES=""
 FRAMEWORKS=""
+PACKAGE_JSON_FILES=$(rg --files -g 'package.json' 2>/dev/null || true)
+TSCONFIG_FILES=$(rg --files -g 'tsconfig.json' -g 'tsconfig.*.json' 2>/dev/null || true)
+
+has_pattern_in_files() {
+  local pattern="$1"
+  local files="$2"
+
+  [ -n "$files" ] || return 1
+
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    if grep -q "$pattern" "$file" 2>/dev/null; then
+      return 0
+    fi
+  done <<< "$files"
+
+  return 1
+}
 
 # JavaScript/TypeScript
-if [ -f "package.json" ]; then
+if [ -n "$PACKAGE_JSON_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}javascript"
-  if [ -f "tsconfig.json" ] || echo "$CHANGED_FILES" | grep -q '\.tsx\?\b'; then
+  if [ -n "$TSCONFIG_FILES" ] || echo "$CHANGED_FILES" | grep -q '\.tsx\?\b'; then
     LANGUAGES="${LANGUAGES},typescript"
   fi
-  # Detect frameworks from package.json
-  if grep -q '"react"' package.json 2>/dev/null; then
+
+  # Detect frameworks from package.json files across the repo.
+  if has_pattern_in_files '"react"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}react"
   fi
-  if grep -q '"next"' package.json 2>/dev/null; then
+  if has_pattern_in_files '"next"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}nextjs"
   fi
-  if grep -q '"vue"' package.json 2>/dev/null; then
+  if has_pattern_in_files '"vue"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}vue"
   fi
-  if grep -q '"express"' package.json 2>/dev/null; then
+  if has_pattern_in_files '"express"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}express"
   fi
-  if grep -q '"nestjs\|@nestjs"' package.json 2>/dev/null; then
+  if has_pattern_in_files '"nestjs\|@nestjs"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}nestjs"
   fi
 fi
@@ -136,7 +155,7 @@ while IFS= read -r file; do
     HAS_FRONTEND=true
   fi
   # Test patterns
-  if echo "$file" | grep -qE '(test|spec|__tests__|_test)\b.*\.|\.test\.|\.spec\.'; then
+  if echo "$file" | grep -qE '(^|/)(__tests__/.*|.*(_test|\.test|\.spec)\.[^.]+)$'; then
     HAS_TESTS=true
   fi
   # Security-sensitive patterns
@@ -156,16 +175,16 @@ HAS_CLAUDE_MD=false
 
 HAS_LINTER=false
 LINTER_CONFIG=""
-for config in .eslintrc .eslintrc.js .eslintrc.json .eslintrc.yml eslint.config.js eslint.config.mjs \
-              phpstan.neon phpstan.neon.dist .phpcs.xml phpcs.xml \
-              .pylintrc .flake8 pyproject.toml .ruff.toml ruff.toml \
-              .golangci.yml .golangci.yaml \
-              .rubocop.yml; do
-  if [ -f "$config" ]; then
-    HAS_LINTER=true
-    LINTER_CONFIG="${LINTER_CONFIG:+$LINTER_CONFIG,}$config"
-  fi
-done
+while IFS= read -r config; do
+  [ -n "$config" ] || continue
+  HAS_LINTER=true
+  LINTER_CONFIG="${LINTER_CONFIG:+$LINTER_CONFIG,}$config"
+done <<< "$(rg --files \
+  -g '.eslintrc' -g '.eslintrc.js' -g '.eslintrc.json' -g '.eslintrc.yml' -g 'eslint.config.js' -g 'eslint.config.mjs' \
+  -g 'phpstan.neon' -g 'phpstan.neon.dist' -g '.phpcs.xml' -g 'phpcs.xml' \
+  -g '.pylintrc' -g '.flake8' -g '.ruff.toml' -g 'ruff.toml' \
+  -g '.golangci.yml' -g '.golangci.yaml' \
+  -g '.rubocop.yml' 2>/dev/null || true)"
 
 # --- Output ---
 echo "DIFF_MODE=$DIFF_MODE"
