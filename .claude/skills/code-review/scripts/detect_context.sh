@@ -41,6 +41,15 @@ LANGUAGES=""
 FRAMEWORKS=""
 PACKAGE_JSON_FILES=$(rg --files -g 'package.json' 2>/dev/null || true)
 TSCONFIG_FILES=$(rg --files -g 'tsconfig.json' -g 'tsconfig.*.json' 2>/dev/null || true)
+COMPOSER_FILES=$(rg --files -g 'composer.json' 2>/dev/null || true)
+PYPROJECT_FILES=$(rg --files -g 'pyproject.toml' 2>/dev/null || true)
+SETUP_PY_FILES=$(rg --files -g 'setup.py' 2>/dev/null || true)
+REQUIREMENTS_FILES=$(rg --files -g 'requirements.txt' 2>/dev/null || true)
+GOMOD_FILES=$(rg --files -g 'go.mod' 2>/dev/null || true)
+CARGO_FILES=$(rg --files -g 'Cargo.toml' 2>/dev/null || true)
+POM_FILES=$(rg --files -g 'pom.xml' 2>/dev/null || true)
+GRADLE_FILES=$(rg --files -g 'build.gradle' -g 'build.gradle.kts' 2>/dev/null || true)
+GEMFILE_FILES=$(rg --files -g 'Gemfile' 2>/dev/null || true)
 
 has_pattern_in_files() {
   local pattern="$1"
@@ -84,56 +93,68 @@ if [ -n "$PACKAGE_JSON_FILES" ]; then
 fi
 
 # PHP
-if [ -f "composer.json" ]; then
+if [ -n "$COMPOSER_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}php"
-  if grep -q '"laravel/framework"' composer.json 2>/dev/null; then
+  if has_pattern_in_files '"laravel/framework"' "$COMPOSER_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}laravel"
   fi
-  if grep -q '"symfony/' composer.json 2>/dev/null; then
+  if has_pattern_in_files '"symfony/' "$COMPOSER_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}symfony"
   fi
 fi
 
 # Python
-if [ -f "pyproject.toml" ] || [ -f "setup.py" ] || [ -f "requirements.txt" ]; then
+PYTHON_FILES=""
+[ -n "$PYPROJECT_FILES" ] && PYTHON_FILES="$PYPROJECT_FILES"
+[ -n "$SETUP_PY_FILES" ] && PYTHON_FILES="${PYTHON_FILES:+$PYTHON_FILES
+}$SETUP_PY_FILES"
+[ -n "$REQUIREMENTS_FILES" ] && PYTHON_FILES="${PYTHON_FILES:+$PYTHON_FILES
+}$REQUIREMENTS_FILES"
+
+if [ -n "$PYTHON_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}python"
-  if grep -rq 'django' pyproject.toml setup.py requirements.txt 2>/dev/null; then
+  if has_pattern_in_files 'django' "$PYTHON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}django"
   fi
-  if grep -rq 'fastapi' pyproject.toml setup.py requirements.txt 2>/dev/null; then
+  if has_pattern_in_files 'fastapi' "$PYTHON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}fastapi"
   fi
-  if grep -rq 'flask' pyproject.toml setup.py requirements.txt 2>/dev/null; then
+  if has_pattern_in_files 'flask' "$PYTHON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}flask"
   fi
 fi
 
 # Go
-if [ -f "go.mod" ]; then
+if [ -n "$GOMOD_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}go"
 fi
 
 # Rust
-if [ -f "Cargo.toml" ]; then
+if [ -n "$CARGO_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}rust"
 fi
 
 # Java/Kotlin
-if [ -f "pom.xml" ] || [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
-  if [ -f "build.gradle.kts" ] || echo "$CHANGED_FILES" | grep -q '\.kt$'; then
+if [ -n "$POM_FILES" ] || [ -n "$GRADLE_FILES" ]; then
+  GRADLE_KTS_FILES=$(rg --files -g 'build.gradle.kts' 2>/dev/null || true)
+  if [ -n "$GRADLE_KTS_FILES" ] || echo "$CHANGED_FILES" | grep -q '\.kt$'; then
     LANGUAGES="${LANGUAGES:+$LANGUAGES,}kotlin"
   else
     LANGUAGES="${LANGUAGES:+$LANGUAGES,}java"
   fi
-  if grep -rq 'spring' pom.xml build.gradle build.gradle.kts 2>/dev/null; then
+  BUILD_FILES=""
+  [ -n "$POM_FILES" ] && BUILD_FILES="$POM_FILES"
+  [ -n "$GRADLE_FILES" ] && BUILD_FILES="${BUILD_FILES:+$BUILD_FILES
+}$GRADLE_FILES"
+  if has_pattern_in_files 'spring' "$BUILD_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}spring"
   fi
 fi
 
 # Ruby
-if [ -f "Gemfile" ]; then
+if [ -n "$GEMFILE_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}ruby"
-  if grep -q 'rails' Gemfile 2>/dev/null; then
+  if has_pattern_in_files 'rails' "$GEMFILE_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}rails"
   fi
 fi
