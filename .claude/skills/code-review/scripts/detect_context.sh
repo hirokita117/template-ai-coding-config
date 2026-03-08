@@ -39,82 +39,122 @@ fi
 # --- Language & framework detection ---
 LANGUAGES=""
 FRAMEWORKS=""
+PACKAGE_JSON_FILES=$(rg --files -g 'package.json' 2>/dev/null || true)
+TSCONFIG_FILES=$(rg --files -g 'tsconfig.json' -g 'tsconfig.*.json' 2>/dev/null || true)
+COMPOSER_FILES=$(rg --files -g 'composer.json' 2>/dev/null || true)
+PYPROJECT_FILES=$(rg --files -g 'pyproject.toml' 2>/dev/null || true)
+SETUP_PY_FILES=$(rg --files -g 'setup.py' 2>/dev/null || true)
+REQUIREMENTS_FILES=$(rg --files -g 'requirements.txt' 2>/dev/null || true)
+GOMOD_FILES=$(rg --files -g 'go.mod' 2>/dev/null || true)
+CARGO_FILES=$(rg --files -g 'Cargo.toml' 2>/dev/null || true)
+POM_FILES=$(rg --files -g 'pom.xml' 2>/dev/null || true)
+GRADLE_FILES=$(rg --files -g 'build.gradle' -g 'build.gradle.kts' 2>/dev/null || true)
+GEMFILE_FILES=$(rg --files -g 'Gemfile' 2>/dev/null || true)
+
+has_pattern_in_files() {
+  local pattern="$1"
+  local files="$2"
+
+  [ -n "$files" ] || return 1
+
+  while IFS= read -r file; do
+    [ -n "$file" ] || continue
+    if grep -q "$pattern" "$file" 2>/dev/null; then
+      return 0
+    fi
+  done <<< "$files"
+
+  return 1
+}
 
 # JavaScript/TypeScript
-if [ -f "package.json" ]; then
+if [ -n "$PACKAGE_JSON_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}javascript"
-  if [ -f "tsconfig.json" ] || echo "$CHANGED_FILES" | grep -q '\.tsx\?\b'; then
+  if [ -n "$TSCONFIG_FILES" ] || echo "$CHANGED_FILES" | grep -q '\.tsx\?\b'; then
     LANGUAGES="${LANGUAGES},typescript"
   fi
-  # Detect frameworks from package.json
-  if grep -q '"react"' package.json 2>/dev/null; then
+
+  # Detect frameworks from package.json files across the repo.
+  if has_pattern_in_files '"react"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}react"
   fi
-  if grep -q '"next"' package.json 2>/dev/null; then
+  if has_pattern_in_files '"next"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}nextjs"
   fi
-  if grep -q '"vue"' package.json 2>/dev/null; then
+  if has_pattern_in_files '"vue"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}vue"
   fi
-  if grep -q '"express"' package.json 2>/dev/null; then
+  if has_pattern_in_files '"express"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}express"
   fi
-  if grep -q '"nestjs\|@nestjs"' package.json 2>/dev/null; then
+  if has_pattern_in_files '"nestjs\|@nestjs"' "$PACKAGE_JSON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}nestjs"
   fi
 fi
 
 # PHP
-if [ -f "composer.json" ]; then
+if [ -n "$COMPOSER_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}php"
-  if grep -q '"laravel/framework"' composer.json 2>/dev/null; then
+  if has_pattern_in_files '"laravel/framework"' "$COMPOSER_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}laravel"
   fi
-  if grep -q '"symfony/' composer.json 2>/dev/null; then
+  if has_pattern_in_files '"symfony/' "$COMPOSER_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}symfony"
   fi
 fi
 
 # Python
-if [ -f "pyproject.toml" ] || [ -f "setup.py" ] || [ -f "requirements.txt" ]; then
+PYTHON_FILES=""
+[ -n "$PYPROJECT_FILES" ] && PYTHON_FILES="$PYPROJECT_FILES"
+[ -n "$SETUP_PY_FILES" ] && PYTHON_FILES="${PYTHON_FILES:+$PYTHON_FILES
+}$SETUP_PY_FILES"
+[ -n "$REQUIREMENTS_FILES" ] && PYTHON_FILES="${PYTHON_FILES:+$PYTHON_FILES
+}$REQUIREMENTS_FILES"
+
+if [ -n "$PYTHON_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}python"
-  if grep -rq 'django' pyproject.toml setup.py requirements.txt 2>/dev/null; then
+  if has_pattern_in_files 'django' "$PYTHON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}django"
   fi
-  if grep -rq 'fastapi' pyproject.toml setup.py requirements.txt 2>/dev/null; then
+  if has_pattern_in_files 'fastapi' "$PYTHON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}fastapi"
   fi
-  if grep -rq 'flask' pyproject.toml setup.py requirements.txt 2>/dev/null; then
+  if has_pattern_in_files 'flask' "$PYTHON_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}flask"
   fi
 fi
 
 # Go
-if [ -f "go.mod" ]; then
+if [ -n "$GOMOD_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}go"
 fi
 
 # Rust
-if [ -f "Cargo.toml" ]; then
+if [ -n "$CARGO_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}rust"
 fi
 
 # Java/Kotlin
-if [ -f "pom.xml" ] || [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
-  if [ -f "build.gradle.kts" ] || echo "$CHANGED_FILES" | grep -q '\.kt$'; then
+if [ -n "$POM_FILES" ] || [ -n "$GRADLE_FILES" ]; then
+  GRADLE_KTS_FILES=$(rg --files -g 'build.gradle.kts' 2>/dev/null || true)
+  if [ -n "$GRADLE_KTS_FILES" ] || echo "$CHANGED_FILES" | grep -q '\.kt$'; then
     LANGUAGES="${LANGUAGES:+$LANGUAGES,}kotlin"
   else
     LANGUAGES="${LANGUAGES:+$LANGUAGES,}java"
   fi
-  if grep -rq 'spring' pom.xml build.gradle build.gradle.kts 2>/dev/null; then
+  BUILD_FILES=""
+  [ -n "$POM_FILES" ] && BUILD_FILES="$POM_FILES"
+  [ -n "$GRADLE_FILES" ] && BUILD_FILES="${BUILD_FILES:+$BUILD_FILES
+}$GRADLE_FILES"
+  if has_pattern_in_files 'spring' "$BUILD_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}spring"
   fi
 fi
 
 # Ruby
-if [ -f "Gemfile" ]; then
+if [ -n "$GEMFILE_FILES" ]; then
   LANGUAGES="${LANGUAGES:+$LANGUAGES,}ruby"
-  if grep -q 'rails' Gemfile 2>/dev/null; then
+  if has_pattern_in_files 'rails' "$GEMFILE_FILES"; then
     FRAMEWORKS="${FRAMEWORKS:+$FRAMEWORKS,}rails"
   fi
 fi
@@ -136,7 +176,7 @@ while IFS= read -r file; do
     HAS_FRONTEND=true
   fi
   # Test patterns
-  if echo "$file" | grep -qE '(test|spec|__tests__|_test)\b.*\.|\.test\.|\.spec\.'; then
+  if echo "$file" | grep -qE '(^|/)(__tests__/.*|.*(_test|\.test|\.spec)\.[^.]+)$'; then
     HAS_TESTS=true
   fi
   # Security-sensitive patterns
@@ -156,16 +196,16 @@ HAS_CLAUDE_MD=false
 
 HAS_LINTER=false
 LINTER_CONFIG=""
-for config in .eslintrc .eslintrc.js .eslintrc.json .eslintrc.yml eslint.config.js eslint.config.mjs \
-              phpstan.neon phpstan.neon.dist .phpcs.xml phpcs.xml \
-              .pylintrc .flake8 pyproject.toml .ruff.toml ruff.toml \
-              .golangci.yml .golangci.yaml \
-              .rubocop.yml; do
-  if [ -f "$config" ]; then
-    HAS_LINTER=true
-    LINTER_CONFIG="${LINTER_CONFIG:+$LINTER_CONFIG,}$config"
-  fi
-done
+while IFS= read -r config; do
+  [ -n "$config" ] || continue
+  HAS_LINTER=true
+  LINTER_CONFIG="${LINTER_CONFIG:+$LINTER_CONFIG,}$config"
+done <<< "$(rg --files \
+  -g '.eslintrc' -g '.eslintrc.js' -g '.eslintrc.json' -g '.eslintrc.yml' -g 'eslint.config.js' -g 'eslint.config.mjs' \
+  -g 'phpstan.neon' -g 'phpstan.neon.dist' -g '.phpcs.xml' -g 'phpcs.xml' \
+  -g '.pylintrc' -g '.flake8' -g '.ruff.toml' -g 'ruff.toml' \
+  -g '.golangci.yml' -g '.golangci.yaml' \
+  -g '.rubocop.yml' 2>/dev/null || true)"
 
 # --- Output ---
 echo "DIFF_MODE=$DIFF_MODE"
