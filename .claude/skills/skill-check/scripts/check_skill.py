@@ -71,6 +71,32 @@ WHEN_TRIGGER_KEYWORDS = [
     "when user", "when the user", "do not use for",
 ]
 
+# Non-English character detection
+# CJK ranges
+_CJK_RANGES = (
+    r'\u3040-\u309F'   # Hiragana
+    r'\u30A0-\u30FF'   # Katakana
+    r'\u4E00-\u9FFF'   # CJK Unified Ideographs
+    r'\u3400-\u4DBF'   # CJK Extension A
+    r'\uF900-\uFAFF'   # CJK Compatibility Ideographs
+)
+# Broader non-ASCII letter ranges (covers Cyrillic, Arabic, Thai, Devanagari, Korean Hangul, etc.)
+_NON_ENGLISH_RE = re.compile(
+    r'[' + _CJK_RANGES +
+    r'\u0400-\u04FF'     # Cyrillic
+    r'\u0600-\u06FF'     # Arabic
+    r'\u0E00-\u0E7F'     # Thai
+    r'\u0900-\u097F'     # Devanagari
+    r'\uAC00-\uD7AF'     # Hangul Syllables
+    r'\u1100-\u11FF'     # Hangul Jamo
+    r']'
+)
+
+
+def contains_non_english(text: str) -> bool:
+    """Return True if text contains non-English script characters."""
+    return bool(_NON_ENGLISH_RE.search(text))
+
 
 # ─── Finding dataclass ──────────────────────────────────────────────────────
 
@@ -268,7 +294,17 @@ class SkillChecker:
         cat = "Description Quality"
         desc_lower = desc.lower()
 
-        # WHAT check: description should say what the skill does
+        # Non-English language check
+        if contains_non_english(desc):
+            self.add(SEVERITY_WARNING, cat,
+                     "Description contains non-English characters. "
+                     "Write the description in English for best triggering accuracy. "
+                     "Claude handles English skill definitions most reliably, regardless of the user's session language.",
+                     "Rewrite the description in English. "
+                     "Structure: '[What the skill does in English]. Use when [trigger conditions in English].'")
+            # Skip word-count and English-pattern checks since they won't be meaningful
+            return
+
         # WHEN check: description should include trigger conditions
         has_when = any(kw in desc_lower for kw in WHEN_TRIGGER_KEYWORDS)
 
@@ -286,7 +322,7 @@ class SkillChecker:
                          "Be specific: describe concrete actions, file types, and user intents.")
                 break
 
-        # Very short description
+        # Very short description (English word count)
         word_count = len(desc.split())
         if word_count < 8:
             self.add(SEVERITY_WARNING, cat,
@@ -316,7 +352,6 @@ class SkillChecker:
 
         lines = self.body.split("\n")
         line_count = len(lines)
-        word_count = len(self.body.split())
 
         # Size checks (progressive disclosure)
         if line_count > SKILL_MD_LARGE_LINES:
@@ -329,10 +364,13 @@ class SkillChecker:
                      f"SKILL.md body is {line_count} lines. Consider whether some content "
                      "could be split to support files for better progressive disclosure.")
 
-        if word_count > SKILL_MD_WARN_WORDS:
-            self.add(SEVERITY_SUGGEST, "Progressive Disclosure",
-                     f"SKILL.md is ~{word_count} words. Large content loads into context on every trigger. "
-                     "Move detailed docs to references/ to reduce token usage.")
+        # Word count check (only meaningful for English text)
+        if not contains_non_english(self.body):
+            word_count = len(self.body.split())
+            if word_count > SKILL_MD_WARN_WORDS:
+                self.add(SEVERITY_SUGGEST, "Progressive Disclosure",
+                         f"SKILL.md is ~{word_count} words. Large content loads into context on every trigger. "
+                         "Move detailed docs to references/ to reduce token usage.")
 
         # Check for vague instructions
         body_lower = self.body.lower()
